@@ -230,6 +230,16 @@ class DiT(nn.Module):
     num_heads: int
     mlp_ratio: float
     out_dim: int
+    # 条件编码器参数
+    use_condition_encoder: bool = False
+    cond_width: int = 64
+    cond_Tx: int = 32
+    cond_Rx: int = 32
+    cond_T_steps: int = 1900
+    cond_num_parameter: int = 64
+    cond_H_out: int = 16
+    cond_W_out: int = 16
+    channel_lift_first: bool = False
 
     @nn.compact
     def __call__(self, x, t, c=None):
@@ -261,3 +271,4 @@ class DiT(nn.Module):
         x = nn.Dense(self.out_dim)(x)
 
         return x
+

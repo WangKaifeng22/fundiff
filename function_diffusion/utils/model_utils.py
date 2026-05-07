@@ -65,8 +65,38 @@ def create_autoencoder_state(config, encoder, decoder, tx):
     x = jnp.ones(config.x_dim)
     coords = jnp.ones(config.coords_dim)
 
-    encoder_params = encoder.init(random.PRNGKey(config.seed), x=x)
-    z = encoder.apply(encoder_params, x)
+    model_cfg = getattr(config, "model", None)
+    if model_cfg is None:
+        model_cfg = getattr(config, "autoencoder", None)
+    cond_cfg = getattr(model_cfg, "encoder", None) if model_cfg is not None else None
+    use_condition_encoder = bool(getattr(cond_cfg, "use_condition_encoder", False)) if cond_cfg is not None else False
+
+    if use_condition_encoder:
+        rf = jnp.ones((config.x_dim[0], cond_cfg.cond_Tx, cond_cfg.cond_Rx, cond_cfg.cond_T_steps))
+        probe = jnp.ones((config.x_dim[0], cond_cfg.cond_num_parameter))
+        encoder_params = encoder.init(
+            random.PRNGKey(config.seed),
+            x=x,
+            rf=rf,
+            probe=probe,
+            rng=random.PRNGKey(config.seed + 1),
+            drop_prob=0.0,
+            training=False,
+            force_cond=True,
+        )
+        z = encoder.apply(
+            encoder_params,
+            x,
+            rf=rf,
+            probe=probe,
+            rng=random.PRNGKey(config.seed + 2),
+            drop_prob=0.0,
+            training=False,
+            force_cond=True,
+        )
+    else:
+        encoder_params = encoder.init(random.PRNGKey(config.seed), x=x)
+        z = encoder.apply(encoder_params, x)
     decoder_params = decoder.init(random.PRNGKey(config.seed), x=z, coords=coords)
     params = (encoder_params, decoder_params)
 
