@@ -22,9 +22,6 @@ def get_base_config():
     config.x_dim = [2, 200, 200, 1]
     config.coords_dim = [2,]  # Only for initializing CViT model
 
-    # Conditional encoder training knobs
-    config.cond_encoder = cond_encoder = ml_collections.ConfigDict()
-    cond_encoder.drop_prob = 0.2
 
     # Training or evaluation
     config.mode = "train_autoencoder"

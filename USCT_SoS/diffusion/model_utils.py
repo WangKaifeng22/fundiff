@@ -75,7 +75,15 @@ def _loss_fn(
     return loss, (loss_data, loss_res)
 
 
-def create_train_step(encoder, decoder, mesh, use_pde=False, drop_prob=0.2):
+def create_train_step(
+    encoder,
+    decoder,
+    mesh,
+    use_pde=False,
+    drop_prob=0.2,
+    training=True,
+    force_cond=False,
+):
     @jax.jit
     @partial(
         shard_map,
@@ -92,8 +100,8 @@ def create_train_step(encoder, decoder, mesh, use_pde=False, drop_prob=0.2):
                 decoder,
                 use_pde=use_pde,
                 drop_prob=drop_prob,
-                training=True,
-                force_cond=False,
+                training=training,
+                force_cond=force_cond,
             ),
             has_aux=True,
         )

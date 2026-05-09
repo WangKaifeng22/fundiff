@@ -53,7 +53,7 @@ def get_2d_sincos_pos_embed(embed_dim, grid_size):
 
 
 class PatchEmbed(nn.Module):
-    patch_size: tuple = (16, 16)
+    patch_size: Tuple[int, int] = (16, 16)
     emb_dim: int = 768
     use_norm: bool = False
     kernel_init: Callable = nn.initializers.xavier_uniform()
@@ -156,8 +156,8 @@ class PerceiverBlock(nn.Module):
 
 
 class Encoder(nn.Module):
-    patch_size: int
-    grid_size: Tuple
+    patch_size: Tuple[int, int]
+    grid_size: Tuple[int, int]
     emb_dim: int
     num_latents: int
     depth: int
@@ -170,30 +170,23 @@ class Encoder(nn.Module):
     use_condition_encoder: bool = False  # 是否启用 RF + 坐标编码模块
     cond_width: int = 64                 # Branch 内部宽度
     cond_num_parameter: int = 64
-    """cond_Tx: int = 32
-    cond_Rx: int = 32
-    cond_T_steps: int = 1900
-    cond_H_out: int = 128                # 应与输入声速图空间尺寸一致
-    cond_W_out: int = 128
-    cond_out_channels: int = 1           # 输出伪图的通道数（需匹配输入 x 的通道数）
-    channel_lift_first: bool = False"""
+    cond_out_channels: int = 1
+    drop_prob: float = 0.2
+    training: bool = False
+    force_cond: bool = False
 
     def setup(self):
         if self.use_condition_encoder:
             self.cond_enc = ConditionEncoder(
                 width=self.cond_width,
                 num_parameter=self.cond_num_parameter,
-                """Tx=self.cond_Tx,
-                Rx=self.cond_Rx,
-                T_steps=self.cond_T_steps,
-                H_out=self.cond_H_out,
-                W_out=self.cond_W_out,
-                channel_lift_first=self.channel_lift_first,"""
             )
 
     @nn.compact
     def __call__(self, x, rf=None, probe=None, rng=None,
-                 drop_prob=0.2, training=False, force_cond=False):
+                 drop_prob: Optional[float] = None,
+                 training: Optional[bool] = None,
+                 force_cond: Optional[bool] = None):
         """
         x: 真实声速图 (B, H, W, C)
         rf: RF 信号 (B, Tx, Rx, T)
@@ -202,16 +195,21 @@ class Encoder(nn.Module):
         training: 是否为训练模式
         force_cond: 若为 True，则不论其它条件，都使用条件编码器输出
         """
+        drop_prob = self.drop_prob if drop_prob is None else drop_prob
+        training = self.training if training is None else training
+        force_cond = self.force_cond if force_cond is None else force_cond
+
         # 确定最终用作编码器输入的图像
         if self.use_condition_encoder and rf is not None and probe is not None:
             use_real = True
-            if training and rng is not None and drop_prob > 0.0:
+
+            if force_cond:
+                use_real = False
+            elif training and rng is not None and drop_prob > 0.0:
                 # 随机决定是否“drop条件”（即使用真实图）
-                rng_drop, rng_key = jax.random.split(rng)
+                rng_drop, _ = jax.random.split(rng)
                 do_drop = jax.random.bernoulli(rng_drop, p=drop_prob)
                 use_real = do_drop
-            elif force_cond:
-                use_real = False
             elif not training and not force_cond:
                 # 推理时默认使用条件编码器（模拟实际部署场景）
                 use_real = False
@@ -230,11 +228,6 @@ class Encoder(nn.Module):
                 # 如果空间尺寸不匹配（理论上应已匹配），则进行 resize
                 if (x_cond.shape[1] != x.shape[1]) or (x_cond.shape[2] != x.shape[2]):
                     raise ValueError("condition input shape is wrong")
-                    """x_cond = jax.image.resize(
-                        x_cond,
-                        (x_cond.shape[0], x.shape[1], x.shape[2], x_cond.shape[3]),
-                        method='bilinear'
-                    )"""
                 x = x_cond
             # else: 保持原始真实图像 x
 

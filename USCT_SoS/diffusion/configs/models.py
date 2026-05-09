@@ -26,30 +26,13 @@ def get_fae_config():
     encoder.num_heads = 8
     encoder.mlp_ratio = 2
     encoder.layer_norm_eps = 1e-5
-
-    config.cond_encoder = cond_encoder = ml_collections.ConfigDict()
-    cond_encoder.use_condition_encoder = True
-    cond_encoder.cond_width = 64
-    cond_encoder.cond_num_parameter = 64
-    """cond_encoder.cond_Tx = 32
-    cond_encoder.cond_Rx = 32
-    cond_encoder.cond_T_steps = 1900
-    cond_encoder.cond_H_out = 200
-    cond_encoder.cond_W_out = 200
-    cond_encoder.cond_out_channels = 1
-    cond_encoder.channel_lift_first = False"""
-    cond_encoder.drop_prob = 0.2
-
-    encoder.use_condition_encoder = cond_encoder.use_condition_encoder
-    encoder.cond_width = cond_encoder.cond_width
-    encoder.cond_num_parameter = cond_encoder.cond_num_parameter
-    """encoder.cond_Tx = cond_encoder.cond_Tx
-    encoder.cond_Rx = cond_encoder.cond_Rx
-    encoder.cond_T_steps = cond_encoder.cond_T_steps
-    encoder.cond_H_out = cond_encoder.cond_H_out
-    encoder.cond_W_out = cond_encoder.cond_W_out
-    encoder.cond_out_channels = cond_encoder.cond_out_channels
-    encoder.channel_lift_first = cond_encoder.channel_lift_first"""
+    encoder.use_condition_encoder = True
+    encoder.cond_width = 64
+    encoder.cond_num_parameter = 64
+    encoder.cond_out_channels = 1
+    encoder.drop_prob = 0.2
+    encoder.training = True
+    encoder.force_cond = False
 
     config.decoder = decoder = ml_collections.ConfigDict()
     decoder.period = False

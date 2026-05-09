@@ -55,12 +55,15 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
     state = multihost_utils.host_local_array_to_global_array(state, mesh, P())
 
     # Create loss and train step functions
+    encoder_cfg = config.model.encoder
     train_step = create_train_step(
         encoder,
         decoder,
         mesh,
         use_pde=config.training.use_pde,
-        drop_prob=config.cond_encoder.drop_prob,
+        drop_prob=encoder_cfg.get("drop_prob", 0.2),
+        training=encoder_cfg.get("training", True),
+        force_cond=encoder_cfg.get("force_cond", False),
     )
 
     # Create dataloaders
@@ -120,12 +123,13 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
                 )
             else:
                 x_branch, x_probe, x_aux, y = batch
+                key2 = subkey
 
             query_batch = ((x_branch, x_probe, x_aux), y)
-            coords, rf_branch, probe_vec, y_query = batch_parser.random_query(query_batch, rng_key=key2 if config.training.random_resolution else subkey)
-            target_probe_dim = int(config.model.encoder.cond_num_parameter)
+            coords, rf_branch, probe_vec, y_query = batch_parser.random_query(query_batch, rng_key=key2)
+            target_probe_dim = int(getattr(encoder_cfg, "cond_num_parameter", probe_vec.shape[-1]))
 
-            if probe_vec.shape[-1] < target_probe_dim or probe_vec.shape[-1] > target_probe_dim:
+            if probe_vec.shape[-1] != target_probe_dim:
                 raise ValueError("Target probe dimension must be equal to the encoder dimension")
 
             batch_data = (coords, y, y_query)
