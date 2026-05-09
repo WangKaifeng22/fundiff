@@ -33,6 +33,7 @@ def get_fae_config():
     encoder.drop_prob = 0.2
     encoder.training = True
     encoder.force_cond = True
+    
 
     config.decoder = decoder = ml_collections.ConfigDict()
     decoder.period = False

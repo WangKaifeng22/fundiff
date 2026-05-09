@@ -72,7 +72,7 @@ def create_autoencoder_state(config, encoder, decoder, tx):
     use_condition_encoder = bool(getattr(cond_cfg, "use_condition_encoder", False)) if cond_cfg is not None else False
 
     if use_condition_encoder:
-        rf = jnp.ones((config.x_dim[0], cond_cfg.cond_Tx, cond_cfg.cond_Rx, cond_cfg.cond_T_steps))
+        rf = jnp.ones((config.x_dim[0], config.cond_Tx, config.cond_Rx, config.cond_T_steps))
         probe = jnp.ones((config.x_dim[0], cond_cfg.cond_num_parameter))
         encoder_params = encoder.init(
             random.PRNGKey(config.seed),

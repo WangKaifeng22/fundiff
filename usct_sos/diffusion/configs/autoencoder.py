@@ -21,7 +21,9 @@ def get_base_config():
     # Input shape for initializing Flax models
     config.x_dim = [2, 200, 200, 1]
     config.coords_dim = [2,]  # Only for initializing CViT model
-
+    config.cond_Tx = 32
+    config.cond_Rx = 32
+    config.cond_T_steps = 1900
 
     # Training or evaluation
     config.mode = "train_autoencoder"
@@ -33,11 +35,11 @@ def get_base_config():
 
     # Dataset
     config.dataset = dataset = ml_collections.ConfigDict()
-    dataset.data_path = "./data/usct_sos.h5"
+    dataset.data_path = "/home/wkf/kwave-python/dataset/dataset_shuffle_0.140625-0.453125.h5"
     dataset.downsample_factor = 1
-    dataset.num_train_samples = 3600
-    dataset.train_batch_size = 16  # Per device
-    dataset.test_batch_size = 4  # Per device
+    dataset.num_train_samples = 45000
+    dataset.train_batch_size = 32  # Per device
+    dataset.test_batch_size = 8  # Per device
     dataset.num_workers = 8
 
     # Learning rate
@@ -60,7 +62,7 @@ def get_base_config():
     config.training = training = ml_collections.ConfigDict()
     training.max_steps = 1 * 10**5
     training.num_queries = 4096
-    training.random_resolution = True
+    training.random_resolution = False
     training.use_pde = False
 
     # Logging

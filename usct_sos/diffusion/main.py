@@ -2,6 +2,9 @@ from absl import app
 from absl import flags
 from ml_collections import config_flags
 
+import multiprocessing
+
+
 import jax
 jax.config.update("jax_default_matmul_precision", "highest")
 
@@ -31,5 +34,7 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    if multiprocessing.get_start_method(allow_none=True) is None:
+        multiprocessing.set_start_method('spawn')
     flags.mark_flags_as_required(["config"])
     app.run(main)

@@ -21,7 +21,7 @@ def get_base_config():
     # Input shape for initializing Flax models
     config.x_dim = [2, 256, 256, 2]
     config.coords_dim = [2,]  # Only for initializing CViT model
-
+    
     # Training or evaluation
     config.mode = "train_autoencoder"
 

@@ -52,7 +52,7 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
 
     # Create sharding for data parallelism
     mesh = Mesh(mesh_utils.create_device_mesh((jax.device_count(),)), "batch")
-    state = multihost_utils.host_local_array_to_global_array(state, mesh, P())
+    #state = multihost_utils.host_local_array_to_global_array(state, mesh, P())
 
     # Create loss and train step functions
     encoder_cfg = config.model.encoder
@@ -138,7 +138,7 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
             batch_data = multihost_utils.host_local_array_to_global_array(
                 batch_data, mesh, P("batch")
             )
-            state, loss, loss_data, loss_res = train_step(state, batch_data, rng=subkey)
+            state, loss, loss_data, loss_res = train_step(state, batch_data, subkey)
 
         # Logging
         if epoch % config.logging.log_interval == 0:
