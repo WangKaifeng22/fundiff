@@ -93,7 +93,7 @@ class H5BatchParser:
         batch_outputs = y_flat[:, query_idx, :]           # (bs, num_queries, 1)
 
         # 分离 RF 与条件
-        rf_branch = Xb.reshape(bs, -1)                    # 展平 RF
+        rf_branch = Xb
         conditions = self._build_conditions(Xp, X_aux)    # 可能为 None
 
         # 多卡广播坐标
