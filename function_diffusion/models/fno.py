@@ -1,6 +1,6 @@
 import jax.numpy as jnp
-from jax import lax, jit, grad, random, tree_map
-
+from jax import lax, jit, grad, random
+from jax.tree_util import tree_map
 import flax.linen as nn
 
 from typing import Optional, Callable, Dict
