@@ -169,26 +169,26 @@ class Encoder(nn.Module):
     # ---------- 新增：条件编码器相关参数 ----------
     use_condition_encoder: bool = False  # 是否启用 RF + 坐标编码模块
     cond_width: int = 64                 # Branch 内部宽度
-    cond_Tx: int = 32
+    cond_num_parameter: int = 64
+    """cond_Tx: int = 32
     cond_Rx: int = 32
     cond_T_steps: int = 1900
-    cond_num_parameter: int = 64
     cond_H_out: int = 128                # 应与输入声速图空间尺寸一致
     cond_W_out: int = 128
     cond_out_channels: int = 1           # 输出伪图的通道数（需匹配输入 x 的通道数）
-    channel_lift_first: bool = False
+    channel_lift_first: bool = False"""
 
     def setup(self):
         if self.use_condition_encoder:
             self.cond_enc = ConditionEncoder(
                 width=self.cond_width,
-                Tx=self.cond_Tx,
+                num_parameter=self.cond_num_parameter,
+                """Tx=self.cond_Tx,
                 Rx=self.cond_Rx,
                 T_steps=self.cond_T_steps,
-                num_parameter=self.cond_num_parameter,
                 H_out=self.cond_H_out,
                 W_out=self.cond_W_out,
-                channel_lift_first=self.channel_lift_first,
+                channel_lift_first=self.channel_lift_first,"""
             )
 
     @nn.compact
@@ -380,17 +380,25 @@ class Decoder(nn.Module):
         return x
 
 class Branch(nn.Module):
-    """RF 信号 -> 特征图 (B, width, H_out, W_out)"""
+    """input: RF data"""
     width: int
-    Tx: int
+    """Tx: int
     Rx: int
     T_steps: int
     H_out: int          # 输出高度，应设为 DiT 的 patch grid H
     W_out: int          # 输出宽度，应设为 DiT 的 patch grid W
-    channel_lift_first: bool = False
-
+    channel_lift_first: bool = False"""
+    
+        
     @nn.compact
-    def __call__(self, x):   # x: (B, Tx, Rx, T)
+    def __call__(self, x):
+        x = jnp.swapaxes(x, 1, 3)  # -1, time_steps,R,32
+        x = nn.Dense(self.width)(x)  # -1, time_steps, R, width
+        x = jnp.swapaxes(x, 1, 3)  # -1, width, R, time_steps
+        x = nn.gelu(x)
+        return x
+
+    """def __call__(self, x):   # x: (B, Tx, Rx, T)
         if self.channel_lift_first:
             # Lift Tx axis first
             x = nn.Dense(self.width * 2)(x)                     # (B, Tx, Rx, 2*width)
@@ -412,7 +420,7 @@ class Branch(nn.Module):
             # Channel lift: Tx -> width via Conv
             x = nn.Conv(self.width, kernel_size=(1, 1), use_bias=True)(x)  # (B, width, H_out, W_out)
             x = nn.gelu(x)
-        return x
+        return x"""
 
 
 class Trunk(nn.Module):
@@ -428,21 +436,20 @@ class Trunk(nn.Module):
 
 
 class ConditionEncoder(nn.Module):
-    """将 RF + 坐标编码为 (B, H_out, W_out, width) 的特征图（保持 channel-last 便于后续展平）"""
+    """融合RF data 和 条件输入"""
     width: int = 64
-    Tx: int = 32
+    num_parameter: int = 64
+    """Tx: int = 32
     Rx: int = 32
     T_steps: int = 1900
-    num_parameter: int = 64
     H_out: int = 16
     W_out: int = 16
-    channel_lift_first: bool = True
+    channel_lift_first: bool = True"""
 
     @nn.compact
     def __call__(self, rf, probe):
         # rf: (B, Tx, Rx, T), probe: (B, num_parameter)
-        x1 = Branch(self.width, self.Tx, self.Rx, self.T_steps,
-                    self.H_out, self.W_out, self.channel_lift_first)(rf)    # (B, width, H_out, W_out)
+        x1 = Branch(self.width)(rf)    # (B, width, H_out, W_out)
         x2 = Trunk(self.width, self.num_parameter)(probe)                    # (B, width, 1, 1)
 
         x = x1 * x2          # 广播相乘，得到 (B, width, H_out, W_out)
