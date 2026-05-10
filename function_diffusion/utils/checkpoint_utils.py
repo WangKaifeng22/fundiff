@@ -19,17 +19,17 @@ def create_checkpoint_manager(config, ckpt_path):
 
 def save_checkpoint(ckpt_mngr, state):
     multihost_utils.sync_global_devices("before_ckpt_save")
-    with jax.spmd_mode("allow_all"):
-        ckpt_mngr.save(state.step, args=ocp.args.StandardSave(state))
+    #with jax.spmd_mode("allow_all"):
+    ckpt_mngr.save(state.step, args=ocp.args.StandardSave(state))
 
 
 def restore_checkpoint(ckpt_mngr, state):
     multihost_utils.sync_global_devices("before_ckpt_restore")
-    with jax.spmd_mode("allow_all"):
-        state = ckpt_mngr.restore(
-            ckpt_mngr.latest_step(),
-            args=ocp.args.StandardRestore(state),
-        )
+    #with jax.spmd_mode("allow_all"):
+    state = ckpt_mngr.restore(
+        ckpt_mngr.latest_step(),
+        args=ocp.args.StandardRestore(state),
+    )
     return state
 
 
