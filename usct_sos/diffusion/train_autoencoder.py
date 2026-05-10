@@ -10,6 +10,7 @@ import jax
 import jax.numpy as jnp
 from jax.experimental import mesh_utils, multihost_utils
 from jax.sharding import Mesh, PartitionSpec as P
+from flax.traverse_util import flatten_dict
 
 from function_diffusion.models import Encoder, Decoder
 
@@ -30,6 +31,14 @@ if ROOT_DIR not in sys.path:
 
 from usct_sos.data_utils import create_dataset
 from model_utils import create_train_step
+
+
+def _format_grad_norm_logs(grad_norms, prefix):
+    flat_grad_norms = flatten_dict(grad_norms, sep="/")
+    return {
+        f"{prefix}/{name}": float(value)
+        for name, value in flat_grad_norms.items()
+    }
 
 
 def train_and_evaluate(config: ml_collections.ConfigDict):
@@ -56,6 +65,9 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
 
     # Create loss and train step functions
     encoder_cfg = config.model.encoder
+    grad_norm_cfg = config.logging.grad_norm
+    if grad_norm_cfg.enabled and grad_norm_cfg.log_interval <= 0:
+        raise ValueError("config.logging.grad_norm.log_interval must be positive when grad norm logging is enabled")
     train_step = create_train_step(
         encoder,
         decoder,
@@ -64,6 +76,7 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
         drop_prob=encoder_cfg.get("drop_prob", 0.2),
         training=encoder_cfg.get("training", True),
         force_cond=encoder_cfg.get("force_cond", False),
+        return_grad_norms=grad_norm_cfg.enabled,
     )
 
     # Create dataloaders
@@ -138,7 +151,17 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
             batch_data = multihost_utils.host_local_array_to_global_array(
                 batch_data, mesh, P("batch")
             )
-            state, loss, loss_data, loss_res = train_step(state, batch_data, subkey)
+            if grad_norm_cfg.enabled:
+                state, loss, loss_data, loss_res, grad_norms = train_step(state, batch_data, subkey)
+                current_step = int(state.step)
+                if current_step > 0 and current_step % grad_norm_cfg.log_interval == 0:
+                    grad_log_dict = _format_grad_norm_logs(grad_norms, grad_norm_cfg.prefix)
+                    if jax.process_index() == 0:
+                        wandb.log(grad_log_dict, current_step)
+            else:
+                state, loss, loss_data, loss_res = train_step(state, batch_data, subkey)
+
+
 
         # Logging
         if epoch % config.logging.log_interval == 0:

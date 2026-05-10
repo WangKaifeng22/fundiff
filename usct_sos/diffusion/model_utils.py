@@ -83,7 +83,44 @@ def create_train_step(
     drop_prob=0.2,
     training=True,
     force_cond=False,
+    return_grad_norms=False,
 ):
+    if return_grad_norms:
+        @jax.jit
+        @partial(
+            shard_map,
+            mesh=mesh,
+            in_specs=(P(), P("batch"), P()),
+            out_specs=(P(), P(), P(), P(), P()),
+            check_rep=False,
+        )
+        def train_step(state, batch, rng=None):
+            grad_fn = jax.value_and_grad(
+                partial(
+                    _loss_fn,
+                    encoder,
+                    decoder,
+                    use_pde=use_pde,
+                    drop_prob=drop_prob,
+                    training=training,
+                    force_cond=force_cond,
+                ),
+                has_aux=True,
+            )
+            (loss, aux), grads = grad_fn(state.params, batch, rng)
+            loss_data, loss_res = aux
+
+            grads = lax.pmean(grads, "batch")
+            grad_norms = jax.tree.map(lambda g: jnp.linalg.norm(g), grads)
+            loss = lax.pmean(loss, "batch")
+            loss_data = lax.pmean(loss_data, "batch")
+            loss_res = lax.pmean(loss_res, "batch")
+
+            state = state.apply_gradients(grads=grads)
+            return state, loss, loss_data, loss_res, grad_norms
+
+        return train_step
+
     @jax.jit
     @partial(
         shard_map,

@@ -67,11 +67,15 @@ def get_base_config():
 
     # Logging
     config.logging = logging = ml_collections.ConfigDict()
-    logging.log_interval = 1
+    logging.log_interval = 1 #epoch
+    logging.grad_norm = grad_norm = ml_collections.ConfigDict()
+    grad_norm.enabled = False
+    grad_norm.log_interval = 100 #step
+    grad_norm.prefix = "grad_norms"
 
     # Saving
     config.saving = saving = ml_collections.ConfigDict()
-    saving.save_interval = 2
+    saving.save_interval = 2 #epoch
     saving.num_keep_ckpts = 1
 
     return config
