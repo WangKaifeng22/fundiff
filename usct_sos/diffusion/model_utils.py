@@ -69,7 +69,8 @@ def _loss_fn(
     u_pred = _decode_points(decoder, decoder_params, z, coords)
     u_pred = jnp.squeeze(u_pred)
 
-    loss_data = jnp.mean((y - u_pred) ** 2)
+    #loss_data = jnp.mean((y - u_pred) ** 2)
+    loss_data = jnp.mean(jnp.abs(y - u_pred)) #L1 loss
     loss_res = jnp.asarray(0.0, dtype=loss_data.dtype)
     loss = loss_data if not use_pde else loss_data
     return loss, (loss_data, loss_res)
