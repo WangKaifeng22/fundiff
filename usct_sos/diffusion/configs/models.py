@@ -15,12 +15,12 @@ def _register(get_config):
 @_register
 def get_fae_config():
     config = ml_collections.ConfigDict()
-    config.model_name = "FAE"
+    config.model_name = "FAE_test2"
 
     config.encoder = encoder = ml_collections.ConfigDict()
     encoder.patch_size = (4, 50)   # For tokenization
-    encoder.emb_dim = 256
-    encoder.num_latents = 256
+    encoder.emb_dim = 512
+    encoder.num_latents = 1024
     encoder.grid_size = (80, 80)   # USCT 声速图分辨率
     encoder.depth = 8
     encoder.num_heads = 8
@@ -30,7 +30,7 @@ def get_fae_config():
     encoder.cond_width = 64
     encoder.cond_num_parameter = 64
     encoder.cond_out_channels = 64
-    encoder.drop_prob = 0.2
+    encoder.drop_prob = 0.1
     encoder.training = True
     encoder.force_cond = True
     
@@ -38,7 +38,7 @@ def get_fae_config():
     config.decoder = decoder = ml_collections.ConfigDict()
     decoder.period = False
     decoder.fourier_freq = 10.0
-    decoder.dec_emb_dim = 256
+    decoder.dec_emb_dim = 512
     decoder.dec_depth = 4
     decoder.dec_num_heads = 8
     decoder.mlp_ratio = 2

@@ -80,9 +80,9 @@ def create_autoencoder_state(config, encoder, decoder, tx):
             rf=rf,
             probe=probe,
             rng=random.PRNGKey(config.seed + 1),
-            drop_prob=0.0,
-            training=False,
-            force_cond=True,
+            drop_prob=cond_cfg.drop_prob,
+            training=cond_cfg.training,
+            force_cond=cond_cfg.force_cond,
         )
         z = encoder.apply(
             encoder_params,
@@ -90,9 +90,9 @@ def create_autoencoder_state(config, encoder, decoder, tx):
             rf=rf,
             probe=probe,
             rng=random.PRNGKey(config.seed + 2),
-            drop_prob=0.0,
-            training=False,
-            force_cond=True,
+            drop_prob=cond_cfg.drop_prob,
+            training=cond_cfg.training,
+            force_cond=cond_cfg.force_cond,
         )
     else:
         encoder_params = encoder.init(random.PRNGKey(config.seed), x=x)

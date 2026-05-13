@@ -1,7 +1,7 @@
 import ml_collections
 
 from configs import models
-
+import math
 
 def get_config(model):
     """Get the hyperparameter configuration for a specific model."""
@@ -39,7 +39,7 @@ def get_base_config():
     dataset.downsample_factor = 1
     dataset.num_train_samples = 45000
     dataset.train_batch_size = 32  # Per device
-    dataset.test_batch_size = 8  # Per device
+    dataset.test_batch_size = 4  # Per device
     dataset.num_workers = 8
 
     # Learning rate
@@ -60,17 +60,18 @@ def get_base_config():
 
     # Training
     config.training = training = ml_collections.ConfigDict()
-    training.max_steps = 1 * 10**5
-    training.num_queries = 4096
+    training.max_steps = math.ceil(45000 / 32) * 200
+    training.num_queries = 4096 #H5BatchParser __init__
     training.random_resolution = False
+    training.downsample_factors = [1,2,5]
     training.use_pde = False
 
     # Logging
     config.logging = logging = ml_collections.ConfigDict()
     logging.log_interval = 1 #epoch
     logging.grad_norm = grad_norm = ml_collections.ConfigDict()
-    grad_norm.enabled = False
-    grad_norm.log_interval = 100 #step
+    grad_norm.enabled = True
+    grad_norm.log_interval = 500 #step
     grad_norm.prefix = "grad_norms"
 
     # Saving

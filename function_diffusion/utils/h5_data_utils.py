@@ -97,7 +97,7 @@ class H5BatchParser:
         conditions = self._build_conditions(Xp, X_aux)    # 可能为 None
 
         # 多卡广播坐标
-        batch_coords = repeat(batch_coords, "b d -> n b d", n=jax.device_count())
+        #batch_coords = repeat(batch_coords, "b d -> n b d", n=jax.device_count())
 
         return batch_coords, rf_branch, conditions, batch_outputs
 
@@ -110,7 +110,8 @@ class H5BatchParser:
         y_flat = rearrange(y, "b h w -> b (h w) 1") if y.ndim == 3 else \
                  rearrange(y, "b h w c -> b (h w) c")
 
-        batch_coords = repeat(self.coords, "b d -> n b d", n=jax.device_count())
+        #batch_coords = repeat(self.coords, "b d -> n b d", n=jax.device_count())
+        batch_coords = self.coords
         rf_branch = Xb.reshape(bs, -1)
         conditions = self._build_conditions(Xp, X_aux)
         return batch_coords, rf_branch, conditions, y_flat   # 全量输出

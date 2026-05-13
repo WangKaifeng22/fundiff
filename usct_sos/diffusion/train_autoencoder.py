@@ -85,6 +85,8 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
                                      batch_size=config.dataset.train_batch_size,
                                      num_workers=config.dataset.num_workers,
                                      worker_init_fn=worker_init_fn)
+    
+    downsample_factors = config.training.downsample_factors
 
     # Create batch parser
     sample_batch = next(iter(train_loader))
@@ -126,7 +128,6 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
             if config.training.random_resolution:
                 key1, key2 = jax.random.split(subkey)
 
-                downsample_factors = jnp.array([1, 2, 5])
                 random_downsample = int(jax.device_get(jax.random.choice(key1, downsample_factors)))
                 x_branch, x_probe, x_aux, y = batch
                 y = jax.image.resize(
@@ -148,9 +149,9 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
             batch_data = (coords, y, y_query)
             batch_data = (batch_data, rf_branch, probe_vec)
 
-            batch_data = multihost_utils.host_local_array_to_global_array(
+            """batch_data = multihost_utils.host_local_array_to_global_array(
                 batch_data, mesh, P("batch")
-            )
+            )"""
             if grad_norm_cfg.enabled:
                 state, loss, loss_data, loss_res, grad_norms = train_step(state, batch_data, subkey)
                 current_step = int(state.step)
