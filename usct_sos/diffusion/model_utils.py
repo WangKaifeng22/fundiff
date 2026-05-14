@@ -113,6 +113,11 @@ def create_train_step(
 
             grads = lax.pmean(grads, "batch")
             grad_norms = jax.tree.map(lambda g: jnp.linalg.norm(g), grads)
+
+            if isinstance(grad_norms, tuple):
+                # 假设元组顺序为 (encoder_grad_norms, decoder_grad_norms)
+                grad_norms = {"encoder": grad_norms[0], "decoder": grad_norms[1]}
+
             loss = lax.pmean(loss, "batch")
             loss_data = lax.pmean(loss_data, "batch")
             loss_res = lax.pmean(loss_res, "batch")

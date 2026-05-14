@@ -170,7 +170,7 @@ class Encoder(nn.Module):
     use_condition_encoder: bool = False  # 是否启用 RF + 坐标编码模块
     cond_width: int = 64                 # Branch 内部宽度
     cond_num_parameter: int = 64
-    cond_out_channels: int = 1
+    cond_out_channels: int = 64
     drop_prob: float = 0.2
     training: bool = False
     force_cond: bool = False
@@ -219,12 +219,7 @@ class Encoder(nn.Module):
                 x_cond = self.cond_enc(rf, probe)   # (B, H, W, cond_width)
                 # 投影到与真实图像相同的通道数
                 if self.cond_width != self.cond_out_channels:
-                    x_cond = nn.Conv(
-                        features=self.cond_out_channels,
-                        kernel_size=(1, 1),
-                        use_bias=True,
-                        name='cond_channel_proj'
-                    )(x_cond)
+                    raise ValueError("self.cond_width != self.cond_out_channels")
                 # 如果空间尺寸不匹配（理论上应已匹配），则进行 resize
                 """if (x_cond.shape[1] != x.shape[1]) or (x_cond.shape[2] != x.shape[2]):
                     raise ValueError("condition input shape is wrong")"""
