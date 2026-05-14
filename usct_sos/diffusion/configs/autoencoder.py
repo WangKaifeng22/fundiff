@@ -73,6 +73,8 @@ def get_base_config():
     grad_norm.enabled = True
     grad_norm.log_interval = 500 #step
     grad_norm.prefix = "grad_norms"
+    logging.step_timing = ml_collections.ConfigDict()
+    logging.step_timing.enabled = False
 
     # Saving
     config.saving = saving = ml_collections.ConfigDict()

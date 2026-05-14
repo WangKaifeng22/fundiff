@@ -66,6 +66,7 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
     # Create loss and train step functions
     encoder_cfg = config.model.encoder
     grad_norm_cfg = config.logging.grad_norm
+    step_timing_cfg = config.logging.step_timing
     if grad_norm_cfg.enabled and grad_norm_cfg.log_interval <= 0:
         raise ValueError("config.logging.grad_norm.log_interval must be positive when grad norm logging is enabled")
     train_step = create_train_step(
@@ -78,6 +79,7 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
         force_cond=encoder_cfg.get("force_cond", False),
         return_grad_norms=grad_norm_cfg.enabled,
     )
+    step_timing_enabled = bool(step_timing_cfg.enabled)
 
     # Create dataloaders
     train_dataset, test_dataset = create_dataset(config)
@@ -121,7 +123,17 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
     loss = loss_data = loss_res = jnp.array(0.0)
     for epoch in range(10000):
         start_time = time.time()
-        for batch in train_loader:
+        train_iter = iter(train_loader)
+        while True:
+            if step_timing_enabled:
+                step_timing_t0 = time.perf_counter()
+            try:
+                batch = next(train_iter)
+            except StopIteration:
+                break
+            if step_timing_enabled:
+                data_loader_ms = (time.perf_counter() - step_timing_t0) * 1000.0
+
             rng_key, subkey = jax.random.split(rng_key)
             batch = jax.tree.map(jnp.array, batch)
 
@@ -140,7 +152,13 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
                 key2 = subkey
 
             query_batch = ((x_branch, x_probe, x_aux), y)
+            if step_timing_enabled:
+                random_query_t0 = time.perf_counter()
             coords, rf_branch, probe_vec, y_query = batch_parser.random_query(query_batch, rng_key=key2)
+            if step_timing_enabled:
+                jax.block_until_ready(y_query)
+                random_query_ms = (time.perf_counter() - random_query_t0) * 1000.0
+
             target_probe_dim = int(getattr(encoder_cfg, "cond_num_parameter", probe_vec.shape[-1]))
 
             if probe_vec.shape[-1] != target_probe_dim:
@@ -152,6 +170,8 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
             """batch_data = multihost_utils.host_local_array_to_global_array(
                 batch_data, mesh, P("batch")
             )"""
+            if step_timing_enabled:
+                train_step_t0 = time.perf_counter()
             if grad_norm_cfg.enabled:
                 state, loss, loss_data, loss_res, grad_norms = train_step(state, batch_data, subkey)
                 current_step = int(state.step)
@@ -161,6 +181,19 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
                         wandb.log(grad_log_dict, current_step)
             else:
                 state, loss, loss_data, loss_res = train_step(state, batch_data, subkey)
+
+            if step_timing_enabled:
+                jax.block_until_ready(loss_res)
+                train_step_ms = (time.perf_counter() - train_step_t0) * 1000.0
+                if jax.process_index() == 0:
+                    wandb.log(
+                        {
+                            "timing/data_loader_ms": data_loader_ms,
+                            "timing/random_query_ms": random_query_ms,
+                            "timing/train_step_ms": train_step_ms,
+                        },
+                        int(state.step),
+                    )
 
 
 
