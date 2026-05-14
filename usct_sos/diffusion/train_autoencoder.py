@@ -173,9 +173,12 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
             if step_timing_enabled:
                 train_step_t0 = time.perf_counter()
             if grad_norm_cfg.enabled:
-                state, loss, loss_data, loss_res, grad_norms = train_step(state, batch_data, subkey)
+                state, loss, loss_data, loss_res, grads = train_step(state, batch_data, subkey)
                 current_step = int(state.step)
                 if current_step > 0 and current_step % grad_norm_cfg.log_interval == 0:
+                    grad_norms = jax.tree.map(lambda g: jnp.linalg.norm(g), grads)
+                    # 假设元组顺序为 (encoder_grad_norms, decoder_grad_norms)
+                    grad_norms = {"encoder": grad_norms[0], "decoder": grad_norms[1]}
                     grad_log_dict = _format_grad_norm_logs(grad_norms, grad_norm_cfg.prefix)
                     if jax.process_index() == 0:
                         wandb.log(grad_log_dict, current_step)
