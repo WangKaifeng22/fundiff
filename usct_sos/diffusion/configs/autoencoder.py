@@ -40,7 +40,7 @@ def get_base_config():
     dataset.num_train_samples = 45000
     dataset.train_batch_size = 32  # Per device
     dataset.test_batch_size = 4  # Per device
-    dataset.num_workers = 2
+    dataset.num_workers = 2 #prefetch_factor=2
 
     # Learning rate
     config.lr = lr = ml_collections.ConfigDict()
@@ -48,7 +48,7 @@ def get_base_config():
     lr.peak_value = 1e-3
     lr.decay_rate = 0.9
     lr.transition_steps = 2000
-    lr.warmup_steps = 2000
+    lr.warmup_steps = 4000
 
     # Optim
     config.optim = optim = ml_collections.ConfigDict()
@@ -61,7 +61,7 @@ def get_base_config():
     # Training
     config.training = training = ml_collections.ConfigDict()
     training.max_steps = math.ceil(45000 / 32) * 150
-    training.num_queries = 6400 #H5BatchParser __init__
+    training.num_queries = 2048 #H5BatchParser __init__
     training.random_resolution = False
     training.downsample_factors = [1,2,5]
     training.use_pde = False

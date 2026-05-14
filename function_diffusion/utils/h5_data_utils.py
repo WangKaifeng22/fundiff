@@ -126,5 +126,6 @@ def create_dataloader(dataset, batch_size, num_workers, shuffle=True, drop_last=
         shuffle=shuffle,
         drop_last=drop_last,
         worker_init_fn=worker_init_fn,
+        prefetch_factor=2,
     )
     return data_loader

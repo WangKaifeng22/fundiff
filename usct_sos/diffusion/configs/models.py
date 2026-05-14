@@ -15,13 +15,13 @@ def _register(get_config):
 @_register
 def get_fae_config():
     config = ml_collections.ConfigDict()
-    config.model_name = "FAE_test4"
+    config.model_name = "FAE_test6"
 
     config.encoder = encoder = ml_collections.ConfigDict()
     encoder.patch_size = (16, 19)   # For tokenization (16,19)?
     encoder.emb_dim = 256 #384?
     encoder.num_latents = 512 #perceiver latent shape: (num_latents, emb_dim)
-    encoder.grid_size = (80, 80)   # USCT 声速图分辨率
+    encoder.grid_size = (32, 1900)   # 位置编码网格大小，需与输入数据尺寸和 patch_size 配合
     encoder.depth = 8
     encoder.num_heads = 8
     encoder.mlp_ratio = 2
@@ -30,7 +30,7 @@ def get_fae_config():
     encoder.cond_width = 64
     encoder.cond_num_parameter = 64
     encoder.cond_out_channels = 64
-    encoder.drop_prob = 0
+    encoder.drop_prob = 0 #probility of not use condition encoder
     encoder.training = True
     encoder.force_cond = True
     
