@@ -380,7 +380,7 @@ class Branch(nn.Module):
         
     @nn.compact
     def __call__(self, x):
-        x = jnp.swapaxes(x, 1, 3)  # -1, time_steps,R,32
+        x = jnp.swapaxes(x, 1, 3)  # -1, time_steps,Rx,Tx
         x = nn.Dense(self.width)(x)  # -1, time_steps, R, width
         x = jnp.swapaxes(x, 1, 3)  # -1, width, R, time_steps
         x = nn.gelu(x)

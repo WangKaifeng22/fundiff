@@ -15,12 +15,12 @@ def _register(get_config):
 @_register
 def get_fae_config():
     config = ml_collections.ConfigDict()
-    config.model_name = "FAE_test6"
+    config.model_name = "FAE_test8"
 
     config.encoder = encoder = ml_collections.ConfigDict()
-    encoder.patch_size = (16, 19)   # For tokenization (16,19)?
-    encoder.emb_dim = 256 #384?
-    encoder.num_latents = 512 #perceiver latent shape: (num_latents, emb_dim)
+    encoder.patch_size = (1, 2)   # For tokenization
+    encoder.emb_dim = 256 #perceiver latent dimension
+    encoder.num_latents = 256 #perceiver latent shape: (num_latents, emb_dim)
     encoder.grid_size = (32, 1900)   # 位置编码网格大小，需与输入数据尺寸和 patch_size 配合
     encoder.depth = 8
     encoder.num_heads = 8

@@ -61,6 +61,8 @@ class H5BatchParser:
 
     def _build_conditions(self, Xp, X_aux=None):
         """将换能器坐标与辅助条件拼接为单一条件向量。返回 (bs, total_cond_dim) 或 None。"""
+        if X_aux is None:
+            return Xp if self.use_probe else None
         parts = []
         if self.use_probe and Xp is not None:
             parts.append(Xp.reshape(Xp.shape[0], -1))
@@ -72,15 +74,14 @@ class H5BatchParser:
 
     def random_query(self, batch, rng_key):
         """
-        batch: ((Xb, Xp, X_aux), y)
+        batch: ((Xp, X_aux), y)
         返回:
             batch_coords : (n_devices, num_queries, 2)
-            rf_branch    : (bs, D_rf)   RF 数据（已展平）
             conditions   : (bs, D_cond) 其他条件拼接，若无则为 None
             batch_outputs: (bs, num_queries, 1)
         """
-        (Xb, Xp, X_aux), y = batch
-        bs = Xb.shape[0]
+        (Xp, X_aux), y = batch
+        
 
         # 展平输出场
         y_flat = rearrange(y, "b h w -> b (h w) 1") if y.ndim == 3 else \
@@ -92,31 +93,30 @@ class H5BatchParser:
         batch_coords = self.coords[query_idx]             # (num_queries, 2)
         batch_outputs = y_flat[:, query_idx, :]           # (bs, num_queries, 1)
 
-        # 分离 RF 与条件
-        rf_branch = Xb
+        # 
         conditions = self._build_conditions(Xp, X_aux)    # 可能为 None
 
         # 多卡广播坐标
         #batch_coords = repeat(batch_coords, "b d -> n b d", n=jax.device_count())
 
-        return batch_coords, rf_branch, conditions, batch_outputs
+        return batch_coords, conditions, batch_outputs
 
     @partial(jit, static_argnums=(0,))
     def query_all(self, batch):
         """全量评估返回"""
-        (Xb, Xp, X_aux), y = batch
-        bs = Xb.shape[0]
+        (Xp, X_aux), y = batch
+        #bs = Xb.shape[0]
 
         y_flat = rearrange(y, "b h w -> b (h w) 1") if y.ndim == 3 else \
                  rearrange(y, "b h w c -> b (h w) c")
 
         #batch_coords = repeat(self.coords, "b d -> n b d", n=jax.device_count())
         batch_coords = self.coords
-        rf_branch = Xb.reshape(bs, -1)
+        #rf_branch = Xb.reshape(bs, -1)
         conditions = self._build_conditions(Xp, X_aux)
-        return batch_coords, rf_branch, conditions, y_flat   # 全量输出
+        return batch_coords, conditions, y_flat
 
-def create_dataloader(dataset, batch_size, num_workers, shuffle=True, drop_last=True, worker_init_fn=None):
+def create_dataloader(dataset, batch_size, num_workers, shuffle=False, drop_last=True, worker_init_fn=None):
     num_devices = jax.device_count()
 
     data_loader = DataLoader(

@@ -19,7 +19,7 @@ def get_base_config():
     config.seed = 42
 
     # Input shape for initializing Flax models
-    config.x_dim = [2, 200, 200, 1]
+    config.x_dim = (2, 32, 1900, 1)  # (B, H, W, C)
     config.coords_dim = [2,]  # Only for initializing CViT model
     config.cond_Tx = 32
     config.cond_Rx = 32
@@ -40,7 +40,8 @@ def get_base_config():
     dataset.num_train_samples = 45000
     dataset.train_batch_size = 32  # Per device
     dataset.test_batch_size = 4  # Per device
-    dataset.num_workers = 2 #prefetch_factor=2
+    dataset.num_workers = 4 #prefetch_factor=2
+    dataset.shuffle = False
 
     # Learning rate
     config.lr = lr = ml_collections.ConfigDict()
@@ -60,8 +61,8 @@ def get_base_config():
 
     # Training
     config.training = training = ml_collections.ConfigDict()
-    training.max_steps = math.ceil(45000 / 32) * 150
-    training.num_queries = 2048 #H5BatchParser __init__
+    training.max_steps = math.ceil(45000 / 32) * 100
+    training.num_queries = 6400 #query_all in training so useless   H5BatchParser __init__
     training.random_resolution = False
     training.downsample_factors = [1,2,5]
     training.use_pde = False

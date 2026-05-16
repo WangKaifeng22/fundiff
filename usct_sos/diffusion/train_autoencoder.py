@@ -84,6 +84,7 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
     # Create dataloaders
     train_dataset, test_dataset = create_dataset(config)
     train_loader = create_dataloader(train_dataset,
+                                     shuffle=config.dataset.shuffle,
                                      batch_size=config.dataset.train_batch_size,
                                      num_workers=config.dataset.num_workers,
                                      worker_init_fn=worker_init_fn)
@@ -151,21 +152,17 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
                 x_branch, x_probe, x_aux, y = batch
                 key2 = subkey
 
-            query_batch = ((x_branch, x_probe, x_aux), y)
+            query_batch = ((x_probe, x_aux), y)
             if step_timing_enabled:
                 random_query_t0 = time.perf_counter()
-            coords, rf_branch, probe_vec, y_query = batch_parser.random_query(query_batch, rng_key=key2)
+            #coords, probe_vec, y_query = batch_parser.random_query(query_batch, rng_key=key2)
+            coords, probe_vec, y_query = batch_parser.query_all(query_batch)
             if step_timing_enabled:
                 jax.block_until_ready(y_query)
                 random_query_ms = (time.perf_counter() - random_query_t0) * 1000.0
 
-            target_probe_dim = int(getattr(encoder_cfg, "cond_num_parameter", probe_vec.shape[-1]))
-
-            if probe_vec.shape[-1] != target_probe_dim:
-                raise ValueError("Target probe dimension must be equal to the encoder dimension")
-
-            batch_data = (coords, y, y_query)
-            batch_data = (batch_data, rf_branch, probe_vec)
+            batch_data = (coords, None, y_query) #(coords, input ,y)
+            batch_data = (batch_data, x_branch, probe_vec)
 
             """batch_data = multihost_utils.host_local_array_to_global_array(
                 batch_data, mesh, P("batch")
