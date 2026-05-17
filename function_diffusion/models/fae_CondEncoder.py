@@ -220,9 +220,7 @@ class Encoder(nn.Module):
                 # 投影到与真实图像相同的通道数
                 if self.cond_width != self.cond_out_channels:
                     raise ValueError("self.cond_width != self.cond_out_channels")
-                # 如果空间尺寸不匹配（理论上应已匹配），则进行 resize
-                """if (x_cond.shape[1] != x.shape[1]) or (x_cond.shape[2] != x.shape[2]):
-                    raise ValueError("condition input shape is wrong")"""
+
                 x = x_cond
             # else: 保持原始真实图像 x
 

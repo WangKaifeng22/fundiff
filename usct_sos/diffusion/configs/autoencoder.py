@@ -47,8 +47,8 @@ def get_base_config():
     config.lr = lr = ml_collections.ConfigDict()
     lr.init_value = 0.0
     lr.peak_value = 1e-3
-    lr.decay_rate = 0.9
-    lr.transition_steps = 2000
+    lr.decay_rate = 0.95
+    lr.transition_steps = 10000
     lr.warmup_steps = 4000
 
     # Optim

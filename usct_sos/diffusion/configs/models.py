@@ -18,10 +18,10 @@ def get_fae_config():
     config.model_name = "FAE_test8"
 
     config.encoder = encoder = ml_collections.ConfigDict()
-    encoder.patch_size = (1, 2)   # For tokenization
-    encoder.emb_dim = 256 #perceiver latent dimension
-    encoder.num_latents = 256 #perceiver latent shape: (num_latents, emb_dim)
-    encoder.grid_size = (32, 1900)   # 位置编码网格大小，需与输入数据尺寸和 patch_size 配合
+    encoder.patch_size = (2, 38)   # For tokenization
+    encoder.emb_dim = 256 # Patch embedding dim
+    encoder.num_latents = 256 # perceiver latent shape: (num_latents, emb_dim)
+    encoder.grid_size = (32, 1900)   # 位置编码网格大小，需与输入数据尺寸配合
     encoder.depth = 8
     encoder.num_heads = 8
     encoder.mlp_ratio = 2
