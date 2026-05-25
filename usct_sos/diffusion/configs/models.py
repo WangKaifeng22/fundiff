@@ -15,13 +15,13 @@ def _register(get_config):
 @_register
 def get_fae_config():
     config = ml_collections.ConfigDict()
-    config.model_name = "FAE_test8"
+    config.model_name = "FAE_test11_dropprob0.2"
 
     config.encoder = encoder = ml_collections.ConfigDict()
-    encoder.patch_size = (2, 38)   # For tokenization
+    encoder.patch_size = (2, 2)   # For tokenization
     encoder.emb_dim = 256 # Patch embedding dim
     encoder.num_latents = 256 # perceiver latent shape: (num_latents, emb_dim)
-    encoder.grid_size = (32, 1900)   # 位置编码网格大小，需与输入数据尺寸配合
+    encoder.grid_size = (80, 80)   # position embedding init size, which will resize to (1, h // self.patch_size[0], w // self.patch_size[1])
     encoder.depth = 8
     encoder.num_heads = 8
     encoder.mlp_ratio = 2
@@ -29,10 +29,13 @@ def get_fae_config():
     encoder.use_condition_encoder = True
     encoder.cond_width = 64
     encoder.cond_num_parameter = 64
-    encoder.cond_out_channels = 64
-    encoder.drop_prob = 0 #probility of not use condition encoder
+    #encoder.cond_out_channels = 64
+    encoder.modes1 = 12
+    encoder.modes2 = 20
+    encoder.num_groups = 32
+    encoder.drop_prob = 0.2 #probility of not use condition encoder
     encoder.training = True
-    encoder.force_cond = True
+    encoder.force_cond = False
     
 
     config.decoder = decoder = ml_collections.ConfigDict()

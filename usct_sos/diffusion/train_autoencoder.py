@@ -122,6 +122,9 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
     rng_key = jax.random.PRNGKey(0)
     step = 0
     loss = loss_data = loss_res = jnp.array(0.0)
+
+    global_step = int(state.step)
+
     for epoch in range(10000):
         start_time = time.time()
         train_iter = iter(train_loader)
@@ -161,7 +164,7 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
                 jax.block_until_ready(y_query)
                 random_query_ms = (time.perf_counter() - random_query_t0) * 1000.0
 
-            batch_data = (coords, None, y_query) #(coords, input ,y)
+            batch_data = (coords, y, y_query) #(coords, input ,y)
             batch_data = (batch_data, x_branch, probe_vec)
 
             """batch_data = multihost_utils.host_local_array_to_global_array(
@@ -169,16 +172,17 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
             )"""
             if step_timing_enabled:
                 train_step_t0 = time.perf_counter()
+
+            global_step += 1
             if grad_norm_cfg.enabled:
                 state, loss, loss_data, loss_res, grads = train_step(state, batch_data, subkey)
-                current_step = int(state.step)
-                if current_step > 0 and current_step % grad_norm_cfg.log_interval == 0:
+                if global_step > 0 and global_step % grad_norm_cfg.log_interval == 0:
                     grad_norms = jax.tree.map(lambda g: jnp.linalg.norm(g), grads)
                     # 假设元组顺序为 (encoder_grad_norms, decoder_grad_norms)
                     grad_norms = {"encoder": grad_norms[0], "decoder": grad_norms[1]}
                     grad_log_dict = _format_grad_norm_logs(grad_norms, grad_norm_cfg.prefix)
                     if jax.process_index() == 0:
-                        wandb.log(grad_log_dict, current_step)
+                        wandb.log(grad_log_dict, global_step)
             else:
                 state, loss, loss_data, loss_res = train_step(state, batch_data, subkey)
 
@@ -192,7 +196,7 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
                             "timing/random_query_ms": random_query_ms,
                             "timing/train_step_ms": train_step_ms,
                         },
-                        int(state.step),
+                        global_step,
                     )
 
 
@@ -200,7 +204,7 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
         # Logging
         if epoch % config.logging.log_interval == 0:
             # Log metrics
-            step = int(state.step)
+            #step = int(state.step)
             loss = loss.item()
             loss_data = loss_data.item()
             loss_res = loss_res.item()
@@ -209,17 +213,17 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
             log_dict = {"loss": loss,
                         "loss_data": loss_data,
                         "loss_res": loss_res,
-                        "lr": lr(step)}
+                        "lr": lr(global_step)}
 
             if jax.process_index() == 0:
                 wandb.log(log_dict, step)  # Log metrics to W&B
-                print("step: {},  loss data: {:.3e}, loss res: {:.3e}, time: {:.3e}".format(step, loss_data, loss_res, end_time - start_time))
-
+                print(f"step: {global_step}, loss data: {loss_data_val:.3e}, "
+                      f"loss res: {loss_res_val:.3e}, time: {end_time - start_time:.3e}")
         # Save checkpoint
         if epoch % config.saving.save_interval == 0:
             save_checkpoint(ckpt_mngr, state)
 
-        if step >= config.training.max_steps:
+        if global_step >= config.training.max_steps:
             break
 
     # Save final checkpoint
