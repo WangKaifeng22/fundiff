@@ -206,7 +206,6 @@ class Encoder(nn.Module):
         training = self.training if training is None else training
         force_cond = self.force_cond if force_cond is None else force_cond
 
-        print(f"shape:{x.shape},{rf.shape}")
 
         # 确定最终用作编码器输入的图像
         if self.use_condition_encoder and rf is not None and probe is not None:
@@ -221,9 +220,10 @@ class Encoder(nn.Module):
                 use_real = False
 
             # 用 jax.lax.cond 根据 use_real 动态选择输入
+            _ = self.cond_enc(rf, probe)
             x = jax.lax.cond(
                 use_real,
-                lambda: x,                                    # 使用真实图
+                lambda: jnp.tile(x[..., None], (1, 1, 1, 64)),  # 使用真实图
                 lambda: self.cond_enc(rf, probe),            # 使用条件编码器输出
             )
                 
