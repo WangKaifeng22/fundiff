@@ -61,8 +61,8 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
 
     # Create sharding for data parallelism
     mesh = Mesh(mesh_utils.create_device_mesh((jax.device_count(),)), "batch")
-    state = multihost_utils.host_local_array_to_global_array(state, mesh, P())
-    fae_state = multihost_utils.host_local_array_to_global_array(fae_state, mesh, P())
+    #state = multihost_utils.host_local_array_to_global_array(state, mesh, P())
+    #fae_state = multihost_utils.host_local_array_to_global_array(fae_state, mesh, P())
 
     # Create train step function
     train_step = create_train_diffusion_step(dit, mesh, use_conditioning=True)
@@ -71,9 +71,16 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
     # Create dataloaders
     train_dataset, _ = create_dataset(config)
     train_loader = create_dataloader(train_dataset,
+                                     shuffle=config.dataset.shuffle,
                                      batch_size=config.dataset.batch_size,
                                      num_workers=config.dataset.num_workers,
                                      worker_init_fn=worker_init_fn)
+    
+    downsample_factors = config.training.downsample_factors
+
+    sample_batch = next(iter(train_loader))
+    _, _, _, sample_y = sample_batch
+    h, w = sample_y.shape[1:3]
 
     # Create checkpoint manager
     job_name = f"{config.diffusion.model_name}_use_pde_{config.training.use_pde}"
@@ -99,7 +106,7 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
     encode_cond_step = create_encoder_step(encoder, mesh, training=False, drop_prob=0.0, force_cond=True)
 
     rng_key = random.PRNGKey(0)
-    step = 0
+    global_step = int(state.step)
     loss = jnp.array(0.0)
     for epoch in range(10000):
         start_time = time.time()
@@ -120,39 +127,38 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
 
             if config.training.random_resolution:
                 key1, key2 = random.split(subkey)
-                downsample_factors = jnp.array([1, 2, 5])
                 d = int(jax.device_get(random.choice(key1, downsample_factors)))
                 y = jax.image.resize(
                     y[:, ::d, ::d],
-                    (y.shape[0], y.shape[1], y.shape[2], y.shape[3]),
+                    (y.shape[0], h, w, y.shape[-1]),
                     method="bilinear",
                 )
             else:
                 key2 = subkey
 
-            z_u = encode_real_step(fae_state.params[0], (y, x_branch, probe), rng=key2)
-            z_c = encode_cond_step(fae_state.params[0], (y, x_branch, probe), rng=subkey)
+            z_u = encode_real_step(fae_state.params[0], (y, x_branch, probe), key2) #rng=key2
+            z_c = encode_cond_step(fae_state.params[0], (y, x_branch, probe), subkey) #rng=subkey
 
             diffusion_batch, rng_key = get_diffusion_batch(rng_key, z1=z_u, c=z_c, use_conditioning=True)
+            global_step += 1
             state, loss = train_step(state, diffusion_batch)
 
         # Logging
         if epoch % config.logging.log_interval == 0:
             # Log metrics
-            step = int(state.step)
             loss = loss.item()
             end_time = time.time()
-            log_dict = {"loss": loss, "lr": lr(step)}
+            log_dict = {"loss": loss, "lr": lr(global_step)}
 
             if jax.process_index() == 0:
-                wandb.log(log_dict, step)  # Log metrics to W&B
-                print("step: {}, loss: {:.3e}, time: {:.3e}".format(step, loss, end_time - start_time))
+                wandb.log(log_dict, global_step)  # Log metrics to W&B
+                print("step: {}, loss: {:.3e}, time: {:.3e}".format(global_step, loss, end_time - start_time))
 
         # Save checkpoint
         if epoch % config.saving.save_interval == 0:
             save_checkpoint(ckpt_mngr, state)
 
-        if step >= config.training.max_steps:
+        if global_step >= config.training.max_steps:
             break
 
     # Save final checkpoint

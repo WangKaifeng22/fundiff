@@ -216,9 +216,9 @@ def train_and_evaluate(config: ml_collections.ConfigDict):
                         "lr": lr(global_step)}
 
             if jax.process_index() == 0:
-                wandb.log(log_dict, step)  # Log metrics to W&B
-                print(f"step: {global_step}, loss data: {loss_data_val:.3e}, "
-                      f"loss res: {loss_res_val:.3e}, time: {end_time - start_time:.3e}")
+                wandb.log(log_dict, global_step)  # Log metrics to W&B
+                print(f"step: {global_step}, loss data: {loss_data:.3e}, "
+                      f"loss res: {loss_res:.3e}, time: {end_time - start_time:.3e}")
         # Save checkpoint
         if epoch % config.saving.save_interval == 0:
             save_checkpoint(ckpt_mngr, state)

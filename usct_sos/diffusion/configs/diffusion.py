@@ -1,6 +1,7 @@
 import ml_collections
 
 from configs import models
+import math
 
 
 def get_config(autoencoder_diffusion):
@@ -25,11 +26,14 @@ def get_base_config():
     config.seed = 42
 
     # Input shape for initializing Flax models
-    config.x_dim = [2, 200, 200, 1]
-    config.z_dim = [2, 100, 256]
-    config.c_dim = [2, 100, 256]
+    config.x_dim = [2, 80, 80, ]
+    config.z_dim = [2, 256, 256]
+    config.c_dim = [2, 256, 256]
     config.t_dim = [2,]
     config.coords_dim = [2,]  # Only for initializing CViT model
+    config.cond_Tx = 32
+    config.cond_Rx = 32
+    config.cond_T_steps = 1900
 
     # Training or evaluation
     config.mode = "train_diffusion"
@@ -41,18 +45,19 @@ def get_base_config():
 
     # Dataset
     config.dataset = dataset = ml_collections.ConfigDict()
-    dataset.data_path = "./data/usct_sos.h5"
+    dataset.data_path = "/home/wkf/kwave-python/dataset/dataset_shuffle_0.140625-0.453125.h5"
     dataset.downsample_factor = 1
-    dataset.batch_size = 128  # Per device
-    dataset.num_train_samples = 3600
+    dataset.batch_size = 32  # Per device
+    dataset.num_train_samples = 45000
     dataset.test_batch_size = 4  # Per device
-    dataset.num_workers = 8
+    dataset.num_workers = 4
+    dataset.shuffle = False
 
     # Learning rate
     config.lr = lr = ml_collections.ConfigDict()
     lr.init_value = 0.0
     lr.peak_value = 1e-3
-    lr.decay_rate = 0.9
+    lr.decay_rate = 0.95
     lr.transition_steps = 5000
     lr.warmup_steps = 2000
 
@@ -66,9 +71,10 @@ def get_base_config():
 
     # Training
     config.training = training = ml_collections.ConfigDict()
-    training.max_steps = 1 * 10**5
-    training.num_queries = 256
-    training.random_resolution = True
+    training.max_steps = math.ceil(45000 / 32) * 100
+    #training.num_queries = 256
+    training.random_resolution = False
+    training.downsample_factors = [1,2,5]
     training.use_pde = False
 
     # Evaluation
